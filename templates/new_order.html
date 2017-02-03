@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Create a new order</title>
+  </head>
+  <body>
+    <h1>Create a new order</h1>
+    <form action="/orders/create" method="post">
+      <label for="note">Order note: (optional)</label><br>
+      <input type="text" name="note" value=""></input><br><br>
+
+      <label for="total">Total: (number of cents)</label><br>
+      <input type="text" name="total" value="" placeholder="Total"></input><br><br>
+
+      <input type="submit" name="submit" value="Create Order"><br><br>
+
+      <a href="/" class="button">Home</a>
+      
+    </form>
+  </body>
+</html>

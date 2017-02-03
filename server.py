@@ -10,12 +10,10 @@ app = Flask(__name__)
 app.secret_key = 'development'  # Required to use Flask sessions.
 client_id = os.environ['APP_ID']
 client_secret = os.environ['APP_SECRET']
-base_url = "https://sandbox.dev.clover.com"
+base_url = "https://sandbox.dev.clover.com"  # Change to https://api.clover.com in production.
 
 
-@app.route('/', methods=['GET'])
 def oauth_dance():
-
     # Syntax is .args for GET, .form for POST.
     code = request.args.get('code', None)
     if not code:
@@ -29,29 +27,80 @@ def oauth_dance():
         # request will include a JSON object containing an access_token."
 
         h = Http()
-        header, content = h.request("{}/oauth/token?client_id={}&client_secret={}&code={}".format(
-            base_url,
+        header, content = h.request(base_url+"/oauth/token?client_id={}&client_secret={}&code={}".format(
             client_id,
             client_secret,
             code))
+
         content = json.loads(content)
         access_token = content.get("access_token")
 
+        if not access_token:
+            #TODO: Some kind of error handling.
+            pass
+
         # Store this in the session so we can use it later.
         session["access_token"] = access_token
+        session["merchant_id"] = request.args.get("merchant_id")
 
-        merchant_id = request.args.get("merchant_id")
-        # Now we can use this access token and merchant id with the API.
 
-        header, content = h.request("{}/v3/merchants/{}/orders".format(
-            base_url,
-            merchant_id),
-            headers={'Authorization': 'Bearer '+session.get("access_token")})
+@app.route('/', methods=['GET'])
+def home_page():
+    if not session.get("access_token"):
+        oauth_dance()
+    return render_template("home.html")
 
-        print session
-        print header
-        print content
-        return render_template("base.html")
+
+################################################################################
+# Order-related routes
+################################################################################
+
+@app.route('/orders', methods=['GET'])
+def order_list():
+    '''Display orders.'''
+
+    h = Http()
+    header, content = h.request(base_url+"/v3/merchants/{}/orders".format(
+        session.get("merchant_id")),
+        headers={'Authorization': 'Bearer '+session.get("access_token")})
+
+    return content
+
+
+@app.route('/orders/create', methods=['GET'])
+def order_form():
+    '''Display form for creating a new order.'''
+    return render_template("new_order.html")
+
+
+@app.route('/orders/create', methods=['POST'])
+def create_order():
+    '''Create an order.'''
+
+    # Get the values from the form.
+    note = request.form.get("note")
+    total = int(request.form.get("total"))
+
+    # "Please note, this basic Order object will be treated as unfinished if the
+    # Order's state is null. Before the order has first been set to "open", it
+    # will only be possible to GET the individual order by its id, but it will
+    # not otherwise be included in the merchant's order list, it will also not
+    # appear in the Orders app.
+
+    body = json.dumps({"state": "open", "total": total, "note": note})
+
+    h = Http()
+    header, content = h.request(base_url+"/v3/merchants/{}/orders".format(
+        session.get("merchant_id")),
+        method="POST",
+        headers={'Authorization': 'Bearer '+session.get("access_token"), 'Content-Type': 'application/json'},
+        body=body)
+
+    #TODO: Add flash message: "Order was created." (Maybe pull in order ID from response content?)
+
+    #print content
+
+    return redirect('/')
 
 ################################################################################
 

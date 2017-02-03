@@ -1,3 +1,4 @@
 *.sh
+*.pyc
 env/
 .DS_Store
