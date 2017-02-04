@@ -1,8 +1,9 @@
 import os
 import json
 
-from httplib2 import Http
 from flask import Flask, redirect, render_template, request, session
+
+from clover_api import CloverAPI
 
 app = Flask(__name__)
 
@@ -10,7 +11,6 @@ app = Flask(__name__)
 app.secret_key = 'development'  # Required to use Flask sessions.
 client_id = os.environ['APP_ID']
 client_secret = os.environ['APP_SECRET']
-base_url = "https://sandbox.dev.clover.com"  # Change to https://api.clover.com in production.
 
 
 def oauth_dance():
@@ -19,29 +19,18 @@ def oauth_dance():
     if not code:
         return redirect("https://www.clover.com/oauth/authorize?client_id={}".format(client_id))
 
-    else:
-        # "The code value can be used to obtain an authcode by calling the
-        # /oauth/token endpoint with your client_id (the ID of your app),
-        # client_secret (the app secret listed on your dashboard apps page),
-        # and the value of the code query parameter. The response to this
-        # request will include a JSON object containing an access_token."
+    resp = CloverAPI().get('/oauth/token',
+                           client_id=client_id,
+                           client_secret=client_secret,
+                           code=code)
 
-        h = Http()
-        header, content = h.request(base_url+"/oauth/token?client_id={}&client_secret={}&code={}".format(
-            client_id,
-            client_secret,
-            code))
-
-        content = json.loads(content)
-        access_token = content.get("access_token")
-
-        if not access_token:
-            #TODO: Some kind of error handling.
-            pass
-
-        # Store this in the session so we can use it later.
-        session["access_token"] = access_token
+    try:
+        # Store token in the session so we can use it later.
+        session["access_token"] = resp.access_token
         session["merchant_id"] = request.args.get("merchant_id")
+    except:
+        # TODO: Error catching.
+        raise
 
 
 @app.route('/', methods=['GET'])
@@ -59,12 +48,11 @@ def home_page():
 def order_list():
     '''Display orders.'''
 
-    h = Http()
-    header, content = h.request(base_url+"/v3/merchants/{}/orders".format(
-        session.get("merchant_id")),
-        headers={'Authorization': 'Bearer '+session.get("access_token")})
+    c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
+    resp = c.get('/v3/merchants/{mId}/orders')
+    print resp
 
-    return content
+    return redirect('/')
 
 
 @app.route('/orders/create', methods=['GET'])
