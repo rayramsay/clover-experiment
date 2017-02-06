@@ -103,7 +103,13 @@ def update_orders_form():
 
     c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
     resp = c.get("/v3/merchants/{mId}/orders")
-    # The response dict contains `href` and `elements`, the latter being the list of orders.
+
+    # The response dict contains `href` and `elements`, the latter being the
+    # list of orders.
+        # From REST API documentation: "GET queries made in-browser will also
+        # include hyperlinks to view details of each specific object, under the
+        #'href' field."
+
     orders = resp["elements"]
     print orders
     return render_template("update_orders.html",
@@ -111,7 +117,7 @@ def update_orders_form():
                            interaction="close")
 
 
-@app.route('/orders/update', methods=['POST'])
+@app.route('/orders/close', methods=['POST'])
 def close_order():
     '''Close the selected order.'''
 
@@ -124,11 +130,44 @@ def close_order():
                {"state": None},
                orderId=order_id)
 
-        message = "Order #{} was closed.".format(order_id)
+        message = "Order #{} closed.".format(order_id)
         flash(message)
 
     return redirect('/')
 
+
+@app.route('/orders/delete', methods=['GET'])
+def delete_orders_form():
+    '''Display form for deleting orders. Variation of update orders form.'''
+
+    c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
+    resp = c.get("/v3/merchants/{mId}/orders")
+
+    # The response dict contains `href` and `elements`, the latter being the
+    # list of orders.
+    orders = resp["elements"]
+    print orders
+    return render_template("update_orders.html",
+                           orders=orders,
+                           interaction="delete")
+
+
+@app.route('/orders/delete', methods=['POST'])
+def delete_order():
+    '''Delete the selected order.'''
+
+    # Get the values from the form.
+    order_id = request.form.get("order_id")
+
+    if order_id:
+        c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
+        c.delete("/v3/merchants/{mId}/orders/{orderId}",
+                 orderId=order_id)
+
+        message = "Order #{} deleted.".format(order_id)
+        flash(message)
+
+    return redirect('/')
 
 ################################################################################
 

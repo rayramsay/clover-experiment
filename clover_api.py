@@ -71,6 +71,22 @@ class CloverAPI(object):
         """
         return self._send("POST", endpoint, data, **kwargs)
 
+    def delete(self, endpoint, **kwargs):
+        """Send a post request using Clover's API.
+
+        See documentation for `get`
+
+        Args:
+            endpoint: See documentation for `get`
+            data: A python object to convert to a JSON object to send
+            **kwargs: See documentation for `get`
+        Returns:
+            See documentation for `get`
+        Raises:
+            See documentation for `get`
+        """
+        return self._send("DEL", endpoint, **kwargs)
+
     def _send(self, method, endpoint, data={}, **kwargs):
         # Set parameters
         parameters = kwargs
@@ -98,6 +114,9 @@ class CloverAPI(object):
                                      data=json.dumps(data))
         elif method == "GET":
             response = requests.get(url, params=parameters)
+
+        elif method == "DEL":
+            response = requests.delete(url, params=parameters)
 
         error_msg = None
         if 400 <= response.status_code < 500:
