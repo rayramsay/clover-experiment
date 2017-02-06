@@ -1,16 +1,14 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>My Beautiful App</title>
-  </head>
+{% extends 'base.html' %}
 
-  <body>
-    <h3><a href="orders">Orders</a>:</h3>
-    <ul>
-      <li><a href="orders/create" class="button">Create a new order</a></li>
-      <li><a href="#" class="button">Delete an order</a></li>
-    </ul>
+{% block title %}My Beautiful App{% endblock %}
 
-  </body>
-</html>
+{% block content %}
+
+<h3>Welcome, {{ merchant.name }}!</h3>
+<ul>
+  <li><a href="orders/create">Create a new order</a></li>
+  <li><a href="orders/update">Update an existing order</a></li>
+  <li><a href="#">Delete an order</a></li>
+</ul>
+
+{% endblock %}

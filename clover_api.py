@@ -95,9 +95,9 @@ class CloverAPI(object):
             headers = {}
             headers["content-type"] = "application/json"
             response = requests.post(url, headers=headers, params=parameters,
-                                 data=json.dumps(data))
+                                     data=json.dumps(data))
         elif method == "GET":
-            response =  requests.get(url, params=parameters)
+            response = requests.get(url, params=parameters)
 
         error_msg = None
         if 400 <= response.status_code < 500:
@@ -114,19 +114,3 @@ class CloverAPI(object):
         # Clover always returns JSON object in response
 
         return json.loads(response.content, object_hook=CloverResponseObject)
-
-
-# Example! Increases the price of all items in the inventory by 1 cent
-if __name__ == '__main__':
-    # TODO: remove during production
-    CloverAPI.base_url = "https://www.clover.com"
-
-    # Create CloverAPI instance with Merchant ID and Access Token
-    c = CloverAPI("9c655e20-d50b-df20-8c2d-d48f0ef7d8da", merchant_id="PTEXTPYDZ6K4C")
-
-    # Get all items from merchant's inventory
-    response = c.get("/v2/merchant/{mId}/inventory/items")
-
-    for item in response.items:
-        c.post("/v2/merchant/{mId}/inventory/items/{itemId}/price",
-               {"price": item.price + 1}, itemId=item.id)

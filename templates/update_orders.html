@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Orders{% endblock %}
+
+{% block css %}
+<style>
+ul      {list-style-type: none;}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<h3>Select an order to {{ interaction }}:</h3>
+
+<form action="/orders/update" method="post">
+
+<ul>
+  {% for order in orders %}
+  <li><input type="radio" name="order_id" value="{{ order.id }}"> {{ order.id }}</li>
+    <ul>
+      <li>State: {{order.state}}</li>
+      <li>Note: {{order.note}}</li>
+      <li>Total: ${{ "{0:0.2f}".format(order.total/100) }}</li> <!-- Totals are in cents. -->
+    </ul>
+  {% endfor %}
+</ul>
+
+<input type="submit" name="submit" value="Close Order">
+</form>
+
+<p><a href="/">Home</a></p>
+
+{% endblock %}

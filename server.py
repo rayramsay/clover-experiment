@@ -1,7 +1,6 @@
 import os
-import json
 
-from flask import Flask, redirect, render_template, request, session
+from flask import Flask, flash, redirect, render_template, request, session
 
 from clover_api import CloverAPI
 
@@ -19,25 +18,35 @@ def oauth_dance():
     if not code:
         return redirect("https://www.clover.com/oauth/authorize?client_id={}".format(client_id))
 
-    resp = CloverAPI().get('/oauth/token',
+    resp = CloverAPI().get("/oauth/token",
                            client_id=client_id,
                            client_secret=client_secret,
                            code=code)
 
-    try:
-        # Store token in the session so we can use it later.
-        session["access_token"] = resp.access_token
-        session["merchant_id"] = request.args.get("merchant_id")
-    except:
-        # TODO: Error catching.
-        raise
+    access_token = resp.get("access_token")
+    merchant_id = request.args.get("merchant_id")
+
+    if access_token and merchant_id:
+        # Store in the session so we can use them later.
+        session["access_token"] = access_token
+        session["merchant_id"] = merchant_id
+    else:
+        #TODO: Error handling.
+        raise Exception("Oauth error!")
 
 
 @app.route('/', methods=['GET'])
 def home_page():
     if not session.get("access_token"):
         oauth_dance()
-    return render_template("home.html")
+
+    # Create CloverAPI instance with access token and merchant id.
+    c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
+    # Make API call.
+    merchant = c.get("/v3/merchants/{mId}")
+
+    return render_template("home.html",
+                           merchant=merchant)
 
 
 ################################################################################
@@ -49,14 +58,13 @@ def order_list():
     '''Display orders.'''
 
     c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
-    resp = c.get('/v3/merchants/{mId}/orders')
-    print resp
-
+    orders = c.get("/v3/merchants/{mId}/orders")
+    print orders
     return redirect('/')
 
 
 @app.route('/orders/create', methods=['GET'])
-def order_form():
+def new_order_form():
     '''Display form for creating a new order.'''
     return render_template("new_order.html")
 
@@ -73,22 +81,54 @@ def create_order():
     # Order's state is null. Before the order has first been set to "open", it
     # will only be possible to GET the individual order by its id, but it will
     # not otherwise be included in the merchant's order list, it will also not
-    # appear in the Orders app.
+    # appear in the Orders app."
 
-    body = json.dumps({"state": "open", "total": total, "note": note})
+    c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
+    resp = c.post("/v3/merchants/{mId}/orders",
+                  {"state": "open",
+                   "total": total,
+                   "note": note})
 
-    h = Http()
-    header, content = h.request(base_url+"/v3/merchants/{}/orders".format(
-        session.get("merchant_id")),
-        method="POST",
-        headers={'Authorization': 'Bearer '+session.get("access_token"), 'Content-Type': 'application/json'},
-        body=body)
+    order_id = resp.id
+    message = "Order #{} created.".format(order_id)
+    flash(message)
 
-    #TODO: Add flash message: "Order was created." (Maybe pull in order ID from response content?)
+    print resp
+    return redirect('/')
 
-    #print content
+
+@app.route('/orders/update', methods=['GET'])
+def update_orders_form():
+    '''Display form for updating orders.'''
+
+    c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
+    resp = c.get("/v3/merchants/{mId}/orders")
+    # The response dict contains `href` and `elements`, the latter being the list of orders.
+    orders = resp["elements"]
+    print orders
+    return render_template("update_orders.html",
+                           orders=orders,
+                           interaction="close")
+
+
+@app.route('/orders/update', methods=['POST'])
+def close_order():
+    '''Close the selected order.'''
+
+    # Get the values from the form.
+    order_id = request.form.get("order_id")
+
+    if order_id:
+        c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
+        c.post("/v3/merchants/{mId}/orders/{orderId}",
+               {"state": None},
+               orderId=order_id)
+
+        message = "Order #{} was closed.".format(order_id)
+        flash(message)
 
     return redirect('/')
+
 
 ################################################################################
 
