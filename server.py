@@ -55,10 +55,11 @@ def home_page():
 
 @app.route('/orders', methods=['GET'])
 def order_list():
-    '''Display orders.'''
+    '''Display orders including line items.'''
 
     c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
-    resp = c.get("/v3/merchants/{mId}/orders")
+    resp = c.get("/v3/merchants/{mId}/orders",
+                 expand="lineItems")
 
     # The response dict contains `href` and `elements`, the latter being the
     # list of orders.
