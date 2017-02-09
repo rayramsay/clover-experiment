@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Orders{% endblock %}
+
+{% block css %}
+
+  {% if interaction != "list" %}
+  <style>
+  ul {
+    list-style-type: none;
+  }
+  </style>
+  {% endif %}
+
+{% endblock %}
+
+{% block content %}
+
+{% if interaction != "list" %}
+  <h3>Select orders to {{ interaction }}:</h3>
+    
+  <form action="/orders/{{ interaction }}" method="post">
+{% else %}
+  <h3>Orders</h3>
+{% endif%}
+
+<ul>
+  {% for order in orders %}
+  <li>{% if interaction != "list" %}<input type="checkbox" name="order_id" value="{{ order.id }}">{% endif %}{{ order.id }}</li>
+    <ul>
+
+      {% for key, value in order|dictsort %}
+
+          {% if key == "total" %}
+          
+          <li>{{key}}: ${{ "{0:0.2f}".format(order.total/100) }}</li> <!-- Totals are in cents. -->
+
+          {% else %}
+          <li>{{key}}: {{value}}</li>
+
+          {% endif %}
+
+      {% endfor %}
+
+    </ul>
+  {% endfor %}
+</ul>
+
+{% if interaction != "list" %}
+<input type="submit" name="submit" value="{{ interaction|capitalize() }} Orders">
+</form>
+{%endif%}
+
+<p><a href="/">Home</a></p>
+
+{% endblock %}

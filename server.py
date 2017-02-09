@@ -32,7 +32,7 @@ def oauth_dance():
         session["merchant_id"] = merchant_id
     else:
         #TODO: Error handling.
-        raise Exception("Oauth error!")
+        raise Exception("OAuth error!")
 
 
 @app.route('/', methods=['GET'])
@@ -58,20 +58,22 @@ def order_list():
     '''Display orders.'''
 
     c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
-    orders = c.get("/v3/merchants/{mId}/orders")
-    print orders
-    return redirect('/')
+    resp = c.get("/v3/merchants/{mId}/orders")
+
+    # The response dict contains `href` and `elements`, the latter being the
+    # list of orders.
+    orders = resp["elements"]
+
+    return render_template("orders.html",
+                           orders=orders,
+                           interaction="list")
 
 
-@app.route('/orders/create', methods=['GET'])
-def new_order_form():
-    '''Display form for creating a new order.'''
-    return render_template("new_order.html")
-
-
-@app.route('/orders/create', methods=['POST'])
+@app.route('/orders/create', methods=['GET', 'POST'])
 def create_order():
     '''Create an order.'''
+    if request.method == "GET":
+        return render_template("new_order.html")
 
     # Get the values from the form.
     note = request.form.get("note")
@@ -93,81 +95,73 @@ def create_order():
     message = "Order #{} created.".format(order_id)
     flash(message)
 
-    print resp
     return redirect('/')
 
 
-@app.route('/orders/update', methods=['GET'])
-def update_orders_form():
-    '''Display form for updating orders.'''
+@app.route('/orders/ice_cream', methods=['POST'])
+def order_ice_cream():
+    '''Creates an order with an ice cream line item.'''
 
     c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
-    resp = c.get("/v3/merchants/{mId}/orders")
 
-    # The response dict contains `href` and `elements`, the latter being the
-    # list of orders.
-        # From REST API documentation: "GET queries made in-browser will also
-        # include hyperlinks to view details of each specific object, under the
-        #'href' field."
+    # Create order.
+    resp = c.post("/v3/merchants/{mId}/orders",
+                  {"state": "open",
+                   "note": "ice cream"})
 
-    orders = resp["elements"]
-    print orders
-    return render_template("update_orders.html",
-                           orders=orders,
-                           interaction="close")
+    # Get ID from response.
+    order_id = resp.id
+
+    # Add line item to order. Nb. At a minimum this request must include a price
+    # or a reference to an inventory item.
+    resp = c.post("/v3/merchants/{mId}/orders/{orderId}/line_items",
+                  {"name": "ice cream",
+                   "price": 100},
+                  orderId=order_id)
+
+    message = "You ordered ice cream!"
+    flash(message)
+
+    return redirect('/')
 
 
-@app.route('/orders/close', methods=['POST'])
-def close_order():
-    '''Close the selected order.'''
+@app.route('/orders/<interaction>', methods=['GET', 'POST'])
+def update_orders(interaction):
+    '''Close or delete the selected orders.'''
 
-    # Get the values from the form.
-    order_id = request.form.get("order_id")
+    c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
 
-    if order_id:
-        c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
-        c.post("/v3/merchants/{mId}/orders/{orderId}",
-               {"state": None},
-               orderId=order_id)
+    if request.method == "GET":
+            resp = c.get("/v3/merchants/{mId}/orders")
 
-        message = "Order #{} closed.".format(order_id)
+            # The response dict contains `href` and `elements`, the latter being the
+            # list of orders.
+            orders = resp["elements"]
+
+            return render_template("orders.html",
+                                   orders=orders,
+                                   interaction=interaction)
+
+    # POST
+    # Syntax is `.getlist` because multiple checkboxes may have been checked.
+    order_ids = request.form.getlist("order_id")
+
+    for order_id in order_ids:
+
+        if interaction == "close":
+            c.post("/v3/merchants/{mId}/orders/{orderId}",
+                   {"state": "closed"},  # Setting this field to null means order can only be GET by id.
+                   orderId=order_id)
+
+        elif interaction == "delete":
+            c.delete("/v3/merchants/{mId}/orders/{orderId}",
+                     orderId=order_id)
+
+        message = "Order #{} {}d.".format(order_id, interaction)
         flash(message)
 
     return redirect('/')
 
-
-@app.route('/orders/delete', methods=['GET'])
-def delete_orders_form():
-    '''Display form for deleting orders. Variation of update orders form.'''
-
-    c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
-    resp = c.get("/v3/merchants/{mId}/orders")
-
-    # The response dict contains `href` and `elements`, the latter being the
-    # list of orders.
-    orders = resp["elements"]
-    print orders
-    return render_template("update_orders.html",
-                           orders=orders,
-                           interaction="delete")
-
-
-@app.route('/orders/delete', methods=['POST'])
-def delete_order():
-    '''Delete the selected order.'''
-
-    # Get the values from the form.
-    order_id = request.form.get("order_id")
-
-    if order_id:
-        c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
-        c.delete("/v3/merchants/{mId}/orders/{orderId}",
-                 orderId=order_id)
-
-        message = "Order #{} deleted.".format(order_id)
-        flash(message)
-
-    return redirect('/')
 
 ################################################################################
 

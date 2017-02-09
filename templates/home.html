@@ -6,9 +6,14 @@
 
 <h3>Welcome, {{ merchant.name }}!</h3>
 <ul>
+  <li><a href="orders">View orders</a></li>
   <li><a href="orders/create">Create a new order</a></li>
-  <li><a href="orders/update">Update an existing order</a></li>
-  <li><a href="orders/delete">Delete an order</a></li>
+  <li><a href="orders/close">Close orders</a></li>
+  <li><a href="orders/delete">Delete orders</a></li>
 </ul>
+
+<form action="/orders/ice_cream" method="post">
+<input type="submit" name="submit" value="Click to order ice cream">
+</form>
 
 {% endblock %}
