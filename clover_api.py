@@ -4,6 +4,8 @@ import requests
 import json
 import re
 
+from decos import retry
+
 
 class CloverResponseObject(dict):
     """Object to encapsulate response JSON."""
@@ -72,7 +74,7 @@ class CloverAPI(object):
         return self._send("POST", endpoint, data, **kwargs)
 
     def delete(self, endpoint, **kwargs):
-        """Send a post request using Clover's API.
+        """Send a delete request using Clover's API.
 
         See documentation for `get`
 
@@ -87,15 +89,16 @@ class CloverAPI(object):
         """
         return self._send("DEL", endpoint, **kwargs)
 
+    @retry(requests.exceptions.HTTPError, delay=1)
     def _send(self, method, endpoint, data={}, **kwargs):
-        # Set parameters
+        # Set parameters.
         parameters = kwargs
         if self.access_token:
             parameters["access_token"] = self.access_token
         if self.merchant_id:
             parameters["mId"] = self.merchant_id
 
-        # Replace user-defined path parameters
+        # Replace user-defined path parameters.
         path_params = CloverAPI.path_match.findall(endpoint)
         for key in path_params:
             if key in parameters:
@@ -106,7 +109,7 @@ class CloverAPI(object):
 
         url = CloverAPI.base_url + endpoint
 
-        # Send request
+        # Send request.
         if method == "POST":
             headers = {}
             headers["content-type"] = "application/json"
@@ -130,6 +133,5 @@ class CloverAPI(object):
                 response=response
             )
 
-        # Clover always returns JSON object in response
-
+        # Clover always returns JSON object in response.
         return json.loads(response.content, object_hook=CloverResponseObject)
