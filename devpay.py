@@ -23,19 +23,19 @@ from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
 base_url = "https://apisandbox.dev.clover.com"
-access_token = os.environ['OAUTH_TOKEN']
-merchant_id = os.environ['MERCH_ID']
+access_token = os.environ['STRICT_TOKEN']
+merchant_id = os.environ['STRICT_ID']
 
 ##### Mock card information #####
-card_number = "1234567891011121"
-cvv = "123"
-exp_month = 1
+card_number = "4761739001010010"
+cvv = None
+exp_month = 12
 exp_year = 2018
 billing_zip = "94085"
 
 #### Mock order information #####
-order_id = "3NB7WKMHJMJH6"
-tax_amount = 9
+order_id = "FR6W7Y02DGTWY"
+tax_amount = 0
 amount = 100
 currency = "usd"
 
@@ -43,7 +43,15 @@ currency = "usd"
 
 url = base_url + '/v2/merchant/' + merchant_id + '/pay/key'
 headers = {"Authorization": "Bearer " + access_token}
-resp = requests.get(url, headers=headers).json()
+resp = requests.get(url, headers=headers)
+
+# Don't assume response is JSON.
+try:
+    resp = resp.json()
+except ValueError:
+    #TODO: Error handling goes here.
+    print "GET response n'est pas JSON."
+    print resp
 
 prefix = str(resp["prefix"])
 modulus = long(resp["modulus"])
@@ -79,6 +87,11 @@ payload = {
     "cardEncrypted": card_encrypted
 }
 
-resp = requests.post(url, headers=headers, data=payload).json()
+resp = requests.post(url, headers=headers, data=payload)
 
-print resp
+try:
+    resp = resp.json()
+except ValueError:
+    #TODO: Error handling goes here.
+    print "POST response n'est pas JSON."
+    print resp
