@@ -1,4 +1,5 @@
 import os
+import re
 
 from flask import Flask, flash, redirect, render_template, request, session
 
@@ -10,35 +11,57 @@ app = Flask(__name__)
 app.secret_key = 'development'  # Required to use Flask sessions.
 client_id = os.environ['APP_ID']
 client_secret = os.environ['APP_SECRET']
+base_url = CloverAPI.base_url
 
 
 def oauth_dance():
+    print "Performing OAuth..."
+
     # Syntax is .args for GET, .form for POST.
     code = request.args.get('code', None)
     if not code:
-        return redirect("https://www.clover.com/oauth/authorize?client_id={}".format(client_id))
+        return redirect("{}/oauth/authorize?client_id={}".format(base_url, client_id))
 
-    resp = CloverAPI().get("/oauth/token",
-                           client_id=client_id,
-                           client_secret=client_secret,
-                           code=code)
+    try:
+        resp = CloverAPI().get("/oauth/token",
+                               client_id=client_id,
+                               client_secret=client_secret,
+                               code=code)
+    except requests.exceptions.HTTPError:
+        raise Exception("OAuth request failed!")
 
-    access_token = resp.get("access_token")
-    merchant_id = request.args.get("merchant_id")
+    try:
+        access_token = resp["access_token"]
+        merchant_id = request.args["merchant_id"]
+    except KeyError:
+        raise Exception("Failed to capture required API wrapper parameters!")
 
-    if access_token and merchant_id:
-        # Store in the session so we can use them later.
-        session["access_token"] = access_token
-        session["merchant_id"] = merchant_id
-    else:
-        #TODO: Error handling.
-        raise Exception("OAuth error!")
+    # Store in the session so we can use them later.
+    session["access_token"] = access_token
+    session["merchant_id"] = merchant_id
+    print "OAuth successful!"
 
 
 @app.route('/', methods=['GET'])
 def home_page():
+
+    # Ensure that the merchant did not enter the web app URL directly and that
+    # their mId is present.
+
+    merchant_id = request.args.get('merchant_id', None)
+    pattern = re.compile("clover")
+
+    # There could be no referrer, or the referrer could be not-Clover, or the
+    # request URL could be missing the mId argument.
+    if not request.referrer or not pattern.search(request.referrer) or not merchant_id:
+        flash("Please launch this web app from Clover Home web dashboard.")
+        return render_template("base.html")
+
+    #Get OAuth token if needed.
     if not session.get("access_token"):
         oauth_dance()
+
+    print session
 
     # Create CloverAPI instance with access token and merchant id.
     c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
@@ -143,7 +166,7 @@ def update_orders(interaction):
                                    orders=orders,
                                    interaction=interaction)
 
-    # POST
+    # Make POST requests.
     # Syntax is `.getlist` because multiple checkboxes may have been checked.
     order_ids = request.form.getlist("order_id")
 
@@ -162,6 +185,19 @@ def update_orders(interaction):
         flash(message)
 
     return redirect('/')
+
+
+################################################################################
+# Utility-related routes
+################################################################################
+
+@app.route('/nuke-cookies', methods=['GET'])
+def nuke_cookies():
+    for key in session.keys():
+        session.pop(key)
+
+    print session
+    return "bye cookies"
 
 
 ################################################################################

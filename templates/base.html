@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-    <title>{% block title %}TITLE GOES HERE{% endblock %}</title>
+    <title>{% block title %}{% endblock %}</title>
     
     {% block css %}
     {% endblock %}
@@ -19,7 +19,7 @@
         </div>
     {% endif %}
 
-    {% block content %}CONTENT GOES HERE{% endblock %}
+    {% block content %}{% endblock %}
 
 </body>
 </html>

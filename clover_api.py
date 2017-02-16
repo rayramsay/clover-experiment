@@ -4,6 +4,7 @@ import requests
 import json
 import re
 
+import config
 from decos import retry
 
 
@@ -18,7 +19,7 @@ class CloverResponseObject(dict):
 class CloverAPI(object):
     """CloverAPI object for making API calls to Clover's server."""
 
-    base_url = "https://apisandbox.dev.clover.com"  # Change to https://api.clover.com in production.
+    base_url = config.base_url
     path_match = re.compile("\{([a-zA-Z]*)\}")
 
     def __init__(self, access_token=None, merchant_id=None):
