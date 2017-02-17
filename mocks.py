@@ -2,9 +2,11 @@
 mock_card = {
     "number": "4761739001010010",
     "cvv": None,
-    "exp_month": 12,
-    "exp_year": 2018,
-    "zipcode": "94085"
+    "expMonth": 12,
+    "expYear": 2018,
+    "zip": "94085",
+    "last4": "0010",
+    "first6": "476173"
     }
 
 #### Mock order information #####
