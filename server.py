@@ -16,18 +16,7 @@ base_url = CloverAPI.base_url
 
 
 def oauth_dance():
-    print "Performing OAuth..."
-
-    # Ensure that the merchant did not enter the web app URL directly and that
-    # their mId is present.
-    merchant_id = request.args.get('merchant_id', None)
-    pattern = re.compile("clover")
-
-    # There could be no referrer, or the referrer could be not-Clover, or the
-    # request URL could be missing the mId argument.
-    if not request.referrer or not pattern.search(request.referrer) or not merchant_id:
-        flash("Please launch this web app from Clover Home web dashboard.")
-        return render_template("base.html")
+    print "Attempting OAuth..."
 
     # Syntax is .args for GET, .form for POST.
     code = request.args.get('code', None)
@@ -55,6 +44,13 @@ def oauth_dance():
 @app.route('/', methods=['GET'])
 def home_page():
 
+    # Ensure that the merchant did not enter the web app URL directly and that
+    # their mId is present.
+    merchant_id = request.args.get('merchant_id', None)
+    if not request.referrer or not merchant_id:
+        flash("Please launch this web app from Clover Home web dashboard.")
+        return render_template("base.html")
+
     #Get OAuth token if needed.
     if not session.get("access_token"):
         oauth_dance()
@@ -63,8 +59,8 @@ def home_page():
 
     # Create CloverAPI instance with access token and merchant id.
     c = CloverAPI(session.get("access_token"), session.get("merchant_id"))
-    # Make API call.
 
+    # Make API call.
     try:
         merchant = c.get("/v3/merchants/{mId}")
     except requests.exceptions.HTTPError:
