@@ -13,9 +13,9 @@ oauthlib==2.0.1
 packaging==16.8
 pyasn1==0.2.2
 pycparser==2.17
-pycrypto==2.6.1
+pycryptodome==3.6.6
 pyparsing==2.1.10
-requests==2.13.0
+requests==2.20.0
 requests-oauthlib==0.7.0
 six==1.10.0
 Werkzeug==0.11.15
